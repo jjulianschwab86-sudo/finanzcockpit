@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Autorisierung — Finanzcockpit</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.55; margin: 0; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 2rem 1.25rem; background: #f3f5f8; color: #16202a;
+  }
+  .karte {
+    background: #fff; border: 1px solid #d8dfe7; border-radius: 6px;
+    padding: 1.75rem 2rem 2rem; max-width: 34rem; width: 100%;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #0e1418; color: #e4eaef; }
+    .karte { background: #161e24; border-color: #2a343c; }
+    code, .code { background: #1d262d; border-color: #3c4854; }
+    .hinweis { color: #a3afba; }
+  }
+  h1 { font-size: 1.2rem; margin: 0 0 .2rem; }
+  .ok { color: #146c67; }
+  .bad { color: #8f3a32; }
+  .hinweis { color: #55626f; font-size: .93rem; }
+  .code {
+    display: block; font-family: ui-monospace, Menlo, monospace;
+    font-size: .82rem; word-break: break-all; background: #eef1f5;
+    border: 1px solid #d8dfe7; border-radius: 4px;
+    padding: .7rem .8rem; margin: .9rem 0;
+  }
+  .reihe { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.1rem; }
+  button, a.knopf {
+    font: inherit; font-size: .92rem; cursor: pointer;
+    border: 1px solid #146c67; background: #146c67; color: #fff;
+    border-radius: 4px; padding: .55rem 1rem; text-decoration: none;
+  }
+  button.zweit, a.zweit { background: transparent; color: #146c67; }
+  @media (prefers-color-scheme: dark) {
+    button, a.knopf { background: #2f8078; border-color: #2f8078; }
+    button.zweit, a.zweit { background: transparent; color: #6cc3bb; border-color: #2f8078; }
+  }
+  .klein { font-size: .85rem; margin-top: 1.4rem; }
+</style>
+</head>
+<body>
+<div class="karte">
+  <h1 id="titel">Autorisierung läuft …</h1>
+  <p class="hinweis" id="text">Einen Moment.</p>
+  <div id="detail" hidden>
+    <span class="hinweis">Autorisierungscode:</span>
+    <code class="code" id="codefeld"></code>
+    <div class="reihe">
+      <button id="kopieren">Code kopieren</button>
+      <a class="knopf zweit" id="lokal" href="#">An lokalen Abruf übergeben</a>
+    </div>
+    <p class="klein hinweis">
+      „An lokalen Abruf übergeben“ funktioniert, solange
+      <code>run link</code> im Terminal noch wartet. Sonst den Code kopieren
+      und dort einfügen.
+    </p>
+  </div>
+</div>
+
+<script>
+// Die Bank leitet nach der Freigabe hierher. Enable Banking akzeptiert nur
+// https als Redirect-Ziel, der Abruf laeuft aber lokal - deshalb dieser
+// Zwischenschritt: Code anzeigen und auf Wunsch an 127.0.0.1 weitergeben.
+(function () {
+  var p = new URLSearchParams(location.search);
+  var code = p.get("code");
+  var state = p.get("state");
+  var fehler = p.get("error_description") || p.get("error");
+
+  var titel = document.getElementById("titel");
+  var text = document.getElementById("text");
+  var detail = document.getElementById("detail");
+
+  if (!code) {
+    titel.textContent = "Autorisierung fehlgeschlagen";
+    titel.className = "bad";
+    text.textContent = fehler || "Kein Autorisierungscode in der Rückleitung.";
+    return;
+  }
+
+  titel.textContent = "Autorisierung erfolgreich";
+  titel.className = "ok";
+  text.textContent = "Der Code unten gehört ins Terminal.";
+  detail.hidden = false;
+  document.getElementById("codefeld").textContent = code;
+
+  var ziel = "http://127.0.0.1:8765/callback?code=" + encodeURIComponent(code) +
+             (state ? "&state=" + encodeURIComponent(state) : "");
+  document.getElementById("lokal").href = ziel;
+
+  document.getElementById("kopieren").addEventListener("click", function () {
+    var b = this;
+    navigator.clipboard.writeText(code).then(function () {
+      b.textContent = "Kopiert";
+      setTimeout(function () { b.textContent = "Code kopieren"; }, 2000);
+    }, function () {
+      b.textContent = "Kopieren nicht erlaubt – bitte markieren";
+    });
+  });
+})();
+</script>
+</body>
+</html>
