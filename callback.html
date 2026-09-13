@@ -58,9 +58,9 @@
       <a class="knopf zweit" id="lokal" href="#">An lokalen Abruf übergeben</a>
     </div>
     <p class="klein hinweis">
-      „An lokalen Abruf übergeben“ funktioniert, solange
-      <code>run link</code> im Terminal noch wartet. Sonst den Code kopieren
-      und dort einfügen.
+      „An lokalen Abruf übergeben“ funktioniert, solange das Finanzcockpit
+      läuft und auf der Seite <em>Banken</em> die Autorisierung offen ist.
+      Sonst den Code kopieren und dort von Hand einfügen.
     </p>
   </div>
 </div>
@@ -70,7 +70,13 @@
 // https als Redirect-Ziel, der Abruf laeuft aber lokal - deshalb dieser
 // Zwischenschritt: Code anzeigen und auf Wunsch an 127.0.0.1 weitergeben.
 (function () {
+  // Parameter koennen als Query (?code=...) oder als Fragment (#code=...)
+  // ankommen - je nach Anbieter. Beides lesen, damit die Seite nicht am
+  // Trennzeichen scheitert.
   var p = new URLSearchParams(location.search);
+  if (!p.get("code") && location.hash.length > 1) {
+    p = new URLSearchParams(location.hash.slice(1));
+  }
   var code = p.get("code");
   var state = p.get("state");
   var fehler = p.get("error_description") || p.get("error");
@@ -78,6 +84,20 @@
   var titel = document.getElementById("titel");
   var text = document.getElementById("text");
   var detail = document.getElementById("detail");
+
+  if (!code && !fehler && !location.search && !location.hash) {
+    // Ohne jeden Parameter wurde die Seite direkt aufgerufen - das ist
+    // kein Fehlschlag, sondern der falsche Weg hierher. Rot waere hier
+    // eine Falschmeldung.
+    titel.textContent = "Rückleitungsseite";
+    titel.className = "";
+    text.innerHTML = "Diese Seite ruft die Bank nach der Freigabe von selbst " +
+      "auf und zeigt dann den Autorisierungscode.<br><br>" +
+      "Der Vorgang beginnt im Finanzcockpit unter " +
+      "<strong>Banken</strong> &rarr; Institut suchen &rarr; " +
+      "<em>Verbinden</em>.";
+    return;
+  }
 
   if (!code) {
     titel.textContent = "Autorisierung fehlgeschlagen";
@@ -88,7 +108,8 @@
 
   titel.textContent = "Autorisierung erfolgreich";
   titel.className = "ok";
-  text.textContent = "Der Code unten gehört ins Terminal.";
+  text.textContent = "Zurück ins Finanzcockpit: unten auf " +
+                     "\u201eAn lokalen Abruf übergeben\u201c klicken.";
   detail.hidden = false;
   document.getElementById("codefeld").textContent = code;
 
